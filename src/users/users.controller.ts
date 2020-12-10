@@ -1,5 +1,6 @@
-import { Controller, Get, Logger, Post } from '@nestjs/common';
+import { Body, Controller, Get, Logger, Post } from '@nestjs/common';
 import { UsersService } from './users.service';
+import { CreateUserDto } from './dto/create-user.dto';
 
 @Controller('users')
 export class UsersController {
@@ -13,7 +14,11 @@ export class UsersController {
   signout(){}
 
   @Post('/signup')
-  signup(){}
+  signup(
+    @Body() createUserDto: CreateUserDto
+  ): Promise<Object>{
+    return this.usersService.signup(createUserDto);
+  }
 
   @Post('/recovery')
   recoveryPassword(){}
