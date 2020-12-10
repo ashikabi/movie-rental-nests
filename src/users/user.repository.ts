@@ -9,7 +9,7 @@ import * as bcrypt from 'bcryptjs'
 @EntityRepository(User)
 export class UserRepository extends Repository<User>{
   private logger = new Logger('UserRepository')
-  async signUp(createUserDto: UserCredentialsDto): Promise<Object>{
+  async signUp(createUserDto: UserCredentialsDto): Promise<User>{
     const {email, password} = createUserDto;
     const user = new User()
     const jump = await bcrypt.genSalt()
@@ -21,14 +21,12 @@ export class UserRepository extends Repository<User>{
     user.bcrypt = jump;
 
     try{
-      await user.save();
+      const newUser = await user.save();
+      return newUser
     }catch(error){
       this.logger.error(error);
       throw new InternalServerErrorException();
     }
-
-    return {message: "User Created",
-            detail: "Please verify your email..."}
 
   }
 
