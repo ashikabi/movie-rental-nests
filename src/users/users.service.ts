@@ -2,9 +2,10 @@ import { ConflictException, Injectable, Logger, UnauthorizedException } from '@n
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { UserCredentialsDto } from './dto/create-user.dto';
-import { JwtPayload } from './jwt-payload.interface';
+import { JwtPayload } from './jwt/jwt-payload.interface';
 import { User } from './user.entity';
 import { UserRepository } from './user.repository';
+import { RedisService } from 'nestjs-redis';
 
 
 @Injectable()
@@ -13,11 +14,12 @@ export class UsersService {
   constructor(
     @InjectRepository(UserRepository)
     private userRepository: UserRepository,
-    private jwt: JwtService
+    private jwt: JwtService,
+    private redisService: RedisService,
   ){}
 
   async signin(credentials: UserCredentialsDto): Promise<{accessToken: string}>{
-    const user: User = await this.userRepository.validateCredentials(credentials)
+    let user: User = await this.userRepository.validateCredentials(credentials)
 
     if(!user){
       throw new UnauthorizedException("Invalid Credentials")
@@ -26,11 +28,26 @@ export class UsersService {
     delete user.bcrypt;
     const payload: JwtPayload = {...user};
     const accessToken = await this.jwt.sign(payload)
+
+    const redisCli = await this.redisService.getClient()
+    const val = await redisCli.get("nestjs.validtokens")
+    const validTokens = JSON.parse(val) || []
+
+    validTokens.push(accessToken)
+    await redisCli.set("nestjs.validtokens", JSON.stringify(validTokens))
+    
     return {accessToken}
 
   }
 
-  signout(){}
+  async signout(accessToken: string){
+    const redisCli = await this.redisService.getClient()
+    let val = await redisCli.get("nestjs.validtokens")
+    let validTokens = JSON.parse(val)
+
+    validTokens = validTokens.filter(t => t!== accessToken)
+    await redisCli.set("nestjs.validtokens", JSON.stringify(validTokens))
+  }
 
   async signup(createUserDto: UserCredentialsDto): Promise<Object>{
     const {email} = createUserDto;
