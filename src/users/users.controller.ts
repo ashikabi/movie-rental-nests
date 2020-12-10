@@ -1,6 +1,6 @@
-import { Body, Controller, Get, Logger, Post } from '@nestjs/common';
+import { Body, Controller, Get, Logger, Post, ValidationPipe } from '@nestjs/common';
 import { UsersService } from './users.service';
-import { CreateUserDto } from './dto/create-user.dto';
+import { UserCredentialsDto } from './dto/create-user.dto';
 
 @Controller('users')
 export class UsersController {
@@ -8,14 +8,18 @@ export class UsersController {
   constructor(private usersService: UsersService){}
 
   @Post('/signin')
-  signin(){}
+  signin(
+    @Body(ValidationPipe) credentials: UserCredentialsDto
+  ): Promise<{accessToken: string}>{
+    return this.usersService.signin(credentials)
+  }
 
   @Post('/signout')
   signout(){}
 
   @Post('/signup')
   signup(
-    @Body() createUserDto: CreateUserDto
+    @Body(ValidationPipe) createUserDto: UserCredentialsDto
   ): Promise<Object>{
     return this.usersService.signup(createUserDto);
   }
