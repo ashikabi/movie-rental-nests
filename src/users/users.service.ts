@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, Logger, UnauthorizedException, InternalServerErrorException } from '@nestjs/common';
+import { ConflictException, Injectable, Logger, UnauthorizedException, InternalServerErrorException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { UserCredentialsDto } from './dto/create-user.dto';
@@ -8,8 +8,11 @@ import { UserRepository } from './user.repository';
 import { RedisService } from 'nestjs-redis';
 import { UserStatus } from './user-status.enum';
 import * as nodemailer from 'nodemailer'
+import * as config from 'config'
+import { UpdateUserDto } from './dto/update-user.dto';
+import { UserRole } from './dto/user-role.enum';
 
-
+const emailConfig = config.get('mail')
 @Injectable()
 export class UsersService {
   private logger = new Logger('UsersService')
@@ -26,7 +29,6 @@ export class UsersService {
     if(!user){
       throw new UnauthorizedException("Invalid Credentials")
     }
-
     if(user && user.status == UserStatus.PENDING)
       throw new UnauthorizedException("You need to verify the email")
 
@@ -64,7 +66,7 @@ export class UsersService {
 
     try{
       let result = await this.userRepository.signUp(createUserDto);
-      await this.sendEmailVerificatrion(email, result);
+      await this.sendEmail("VERIFICATION" , email, result);
       
       return {message: "User Created",
               detail: "Please verify your email...",};
@@ -74,34 +76,57 @@ export class UsersService {
 
   }
 
-  recoveryPassword(){}
+  async confirmAccount(accessToken: string):Promise<void>{
+    const rst = await this.jwt.decode(accessToken);
+    const row = await this.userRepository.findOne({where : {email: rst["email"]}})
+    row.status = UserStatus.ACTIVE;
+    await row.save()
+  }
 
-  confirmAccount(){}
+  async updateUser(accessToken: string, updateUserDto: UpdateUserDto){
+    const {email, role} = updateUserDto;
+    const rst = await this.jwt.decode(accessToken);
 
-  updateUser(){}
+    if(rst && rst["role"] !== UserRole.ADMIN)
+      throw new ForbiddenException("Only Admin Users can update a user");
 
-   async sendEmailVerificatrion(email: string, user: User): Promise<void>{
+    const user = await this.userRepository.findOne({where: {email}})
 
-      console.log(user)
-      
-      delete user.password;
-      delete user.bcrypt;
-      const payload: JwtPayload = {...user};
-      const accessToken = await this.jwt.sign(payload)
+    if(!user)
+      throw new NotFoundException(`User : ${email} not found!`);
 
-      const mailTransporter = nodemailer.createTransport({ 
-        service: 'gmail', 
-        auth: { 
-            user: process.env.SMTP_USER || "movierental.nodemailer@gmail.com", 
-            pass: process.env.SMTP_PASS || "!Password1234*"
-        } 
-      }); 
+    user.role = role;
+    await user.save()
+
+
+  }
+
+   async sendEmail(type: string,email: string, user: User): Promise<void>{
+
+    const mailTransporter = nodemailer.createTransport({ 
+      service: emailConfig.type, 
+      auth: { 
+          user: process.env.SMTP_USER || emailConfig.account, 
+          pass: process.env.SMTP_PASS || emailConfig.password
+      } 
+    }); 
+
+      let subject = ""
+      let html = ""
+      if(type === "VERIFICATION"){
+        delete user.password;
+        delete user.bcrypt;
+        const payload: JwtPayload = {...user};
+        const accessToken = await this.jwt.sign(payload)
+        subject = "Confirm Account"
+        html = `<p>Click <a href="http://localhost:3000/users/confirm?accessToken=${accessToken}">here</a> to confirm your account.</p>`
+      }
 
       const mailDetails = { 
-        from: `"Movie Rental API" <${process.env.SMTP_USER || "movierental.nodemailer@gmail.com"}>`, 
+        from: `"Movie Rental API" <${process.env.SMTP_USER || emailConfig.account}>`, 
         to: email,
-        subject: "Confirm Account",
-        html: `<p>Click <a href="http://localhost:3000/confirm?accessToken=${accessToken}">here</a> to confirm your account.</p>`,
+        subject,
+        html,
       }; 
 
       mailTransporter.sendMail(mailDetails, (err, data)=> { 

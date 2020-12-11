@@ -1,7 +1,10 @@
-import { Body, Controller, Get, Logger, Post, Req, UseGuards, ValidationPipe } from '@nestjs/common';
+import { Body, Controller, Get, Logger, Post, Query, Req, UseGuards, ValidationPipe } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UserCredentialsDto } from './dto/create-user.dto';
 import { AuthGuard } from '@nestjs/passport';
+import { GetToken, GetUser } from './decorators/token.decorator';
+import { User } from './user.entity';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 @Controller('users')
 export class UsersController {
@@ -19,9 +22,8 @@ export class UsersController {
 
   @Post('/signout')
   @UseGuards(AuthGuard())
-  signout(@Req() req){
-    const currentToken = req.headers.authorization.split(" ")[1];
-    this.usersService.signout(currentToken)
+  signout(@GetToken() accessToken: string){
+    this.usersService.signout(accessToken)
   }
 
   @Post('/signup')
@@ -31,13 +33,21 @@ export class UsersController {
     return this.usersService.signup(createUserDto);
   }
 
-  @Post('/recovery')
-  recoveryPassword(){}
-
   @Get('/confirm')
-  confirmAccount(){}
+  confirmAccount(
+    @Query('accessToken') accessToken: string
+  ){
+    this.usersService.confirmAccount(accessToken)
+    return {message: "user is verified!!!"}
+  }
 
   @Post('/update')
-  updateUser(){}
+  @UseGuards(AuthGuard())
+  updateUser(
+    @GetToken() accessToken: string,
+    @Body() updateUserDto: UpdateUserDto
+    ){
+      return this.usersService.updateUser(accessToken, updateUserDto)
+    }
 
 }

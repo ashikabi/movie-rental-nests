@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Logger, Param, ParseIntPipe, Patch, Post, Query, ValidationPipe } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Logger, Param, ParseIntPipe, Patch, Post, Query, UseGuards, ValidationPipe } from '@nestjs/common';
 import { Movie } from './movie.entity';
 import { MoviesService } from './movies.service';
 import { CreateMovieDto } from './dto/create-movie.dto';
@@ -6,6 +6,7 @@ import { UpdateMovieDto } from './dto/update-movie.dto';
 import { FilterMovie } from './dto/filter-movie.dto';
 import { PaginationDto } from './dto/pagination.dto';
 import { Pagination } from 'nestjs-typeorm-paginate';
+import { AuthGuard } from '@nestjs/passport';
 
 @Controller('movies')
 export class MoviesController {
@@ -39,6 +40,7 @@ export class MoviesController {
   }
 
   @Patch('/:id')
+  @UseGuards(AuthGuard())
   updateMovie(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateMovieDto: UpdateMovieDto
@@ -46,7 +48,7 @@ export class MoviesController {
     return this.moviesService.updateMovie(id, updateMovieDto);
   }
 
-  @Patch('/:id')
+  @Patch('/like/:id')
   likeAMovie(){}
 
   @Delete('/:id')
