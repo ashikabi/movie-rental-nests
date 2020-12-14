@@ -1,0 +1,56 @@
+version: '3'
+services:
+  mysql:
+    hostname: mysql
+    image: mysql:latest
+    ports:
+      - "3306:3306"
+    command: --default-authentication-plugin=mysql_native_password
+    restart: always
+    environment: 
+      - MYSQL_ROOT_PASSWORD=!TestingDB20
+      - MYSQL_DATABASE=movierental
+  redis:
+    hostname: redis
+    image: 'redis:latest'
+    ports:
+      - "6379:6379"
+  ngnix:
+    hostname: nginx
+    restart: always
+    build:
+      dockerfile: Dockerfile
+      context: ./nginx
+    ports:
+      - '3050:80'
+    links:
+      - "api"
+  api:
+    hostname: api
+    build:
+      dockerfile: Dockerfile
+      context: .
+      args:
+        - REDIS_HOST=redis
+        - REDIS_PORT=6379
+        - MYSQL_HOST=mysql
+        - MYSQL_PORT=3306
+        - MYSQL_ROOT_PASSWORD=!TestingDB20
+        - MYSQL_DATABASE=movierental
+        - DB_USER=root
+    volumes:
+      - /app/node_modules
+      - .:/app
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - MYSQL_HOST=mysql
+      - MYSQL_PORT=3306
+      - MYSQL_ROOT_PASSWORD=!TestingDB20
+      - MYSQL_DATABASE=movierental
+      - DB_USER=root
+    links: 
+      - "mysql"
+      - "redis"
+      
+    
