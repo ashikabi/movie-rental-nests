@@ -6,16 +6,18 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
 import { JwtStrategy } from './jwt/jwt.strategy';
-import * as config from 'config'
+import { ValidUserMiddleware } from 'src/commons/valid-user.middleware';
+//import * as config from 'config'
+import { IsSignedoutMiddleware } from '../movies/middlewares/is-signedout.middleware';
 
-const jwtConfig = config.get('jwt')
+//const jwtConfig = config.get('jwt')
 @Module({
   imports: [
     PassportModule.register({defaultStrategy: 'jwt'}),
     JwtModule.register({
-      secret: process.env.JWT_SECRET || jwtConfig.secret,
+      secret: process.env.JWT_SECRET,// || jwtConfig.secret,
       signOptions: {
-        expiresIn: process.env.JWT_EXPIRATION || jwtConfig.expires
+        expiresIn: parseInt(process.env.JWT_EXPIRATION),// || jwtConfig.expires
       }
     }),
     TypeOrmModule.forFeature([UserRepository])
@@ -24,4 +26,17 @@ const jwtConfig = config.get('jwt')
   providers: [UsersService, JwtStrategy],
   exports: [JwtStrategy, PassportModule]
 })
-export class UsersModule {}
+
+export class UsersModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+    .apply(ValidUserMiddleware)
+    .forRoutes({path: 'users/*', method: RequestMethod.PATCH})
+
+    consumer
+    .apply(IsSignedoutMiddleware)
+    .forRoutes({path: 'users/*', method: RequestMethod.PATCH})
+  
+
+  }
+}

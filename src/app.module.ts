@@ -5,14 +5,14 @@ import { TransactionsModule } from './transactions/transactions.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { typeOrmConfig } from './config/typeorm.config';
 import { RedisModule} from 'nestjs-redis'
-import * as config from 'config'
+//import * as config from 'config'
 
-const redisConfig = config.get('redis');
+//const redisConfig = config.get('redis');
 @Module({
   imports: [MoviesModule, UsersModule, TransactionsModule, 
     RedisModule.register({
-      host: process.env.REDIS_HOST || redisConfig.host,
-      port: (process.env.REDIS_PORT? parseInt(process.env.REDIS_PORT): redisConfig.port),
+      host: process.env.REDIS_HOST,// || redisConfig.host,
+      port: parseInt(process.env.REDIS_PORT),
     }),
     TypeOrmModule.forRoot(typeOrmConfig)],
 })

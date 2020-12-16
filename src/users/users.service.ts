@@ -8,11 +8,11 @@ import { UserRepository } from './user.repository';
 import { RedisService } from 'nestjs-redis';
 import { UserStatus } from './user-status.enum';
 import * as nodemailer from 'nodemailer'
-import * as config from 'config'
+//import * as config from 'config'
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserRole } from './dto/user-role.enum';
 
-const emailConfig = config.get('mail')
+//const emailConfig = config.get('mail')
 @Injectable()
 export class UsersService {
   private logger = new Logger('UsersService')
@@ -36,9 +36,9 @@ export class UsersService {
     delete user.password;
     delete user.bcrypt;
     const payload: JwtPayload = {...user};
-    const accessToken = await this.jwt.sign(payload)
+    const accessToken = this.jwt.sign(payload)
 
-    const redisCli = await this.redisService.getClient()
+    const redisCli = this.redisService.getClient()
     const val = await redisCli.get("nestjs.validtokens")
     const validTokens = JSON.parse(val) || []
 
@@ -50,7 +50,7 @@ export class UsersService {
   }
 
   async signout(accessToken: string){
-    const redisCli = await this.redisService.getClient()
+    const redisCli = this.redisService.getClient()
     let val = await redisCli.get("nestjs.validtokens")
     let validTokens = JSON.parse(val)
 
@@ -83,14 +83,14 @@ export class UsersService {
     await row.save()
   }
 
-  async updateUser(accessToken: string, updateUserDto: UpdateUserDto){
+  async updateUser(id: number,accessToken: string, updateUserDto: UpdateUserDto){
     const {email, role} = updateUserDto;
     const rst = await this.jwt.decode(accessToken);
 
     if(rst && rst["role"] !== UserRole.ADMIN)
       throw new ForbiddenException("Only Admin Users can update a user");
 
-    const user = await this.userRepository.findOne({where: {email}})
+    const user = await this.userRepository.findOne({where: {id}})
 
     if(!user)
       throw new NotFoundException(`User : ${email} not found!`);
@@ -104,10 +104,10 @@ export class UsersService {
    async sendEmail(type: string,email: string, user: User): Promise<void>{
 
     const mailTransporter = nodemailer.createTransport({ 
-      service: emailConfig.type, 
+      service: 'gmail',//emailConfig.type, 
       auth: { 
-          user: process.env.SMTP_USER || emailConfig.account, 
-          pass: process.env.SMTP_PASS || emailConfig.password
+          user: process.env.SMTP_USER,// || emailConfig.account, 
+          pass: process.env.SMTP_PASS// || emailConfig.password
       } 
     }); 
 
@@ -117,13 +117,13 @@ export class UsersService {
         delete user.password;
         delete user.bcrypt;
         const payload: JwtPayload = {...user};
-        const accessToken = await this.jwt.sign(payload)
+        const accessToken = this.jwt.sign(payload)
         subject = "Confirm Account"
         html = `<p>Click <a href="http://localhost:3000/users/confirm?accessToken=${accessToken}">here</a> to confirm your account.</p>`
       }
 
       const mailDetails = { 
-        from: `"Movie Rental API" <${process.env.SMTP_USER || emailConfig.account}>`, 
+        from: `"Movie Rental API" <${process.env.SMTP_USER}>`, 
         to: email,
         subject,
         html,

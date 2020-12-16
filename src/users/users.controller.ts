@@ -1,9 +1,8 @@
-import { Body, Controller, Get, Logger, Post, Query, Req, UseGuards, ValidationPipe } from '@nestjs/common';
+import { Body, Controller, Get, Logger, Param, ParseIntPipe, Patch, Post, Query, Req, UseGuards, ValidationPipe } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UserCredentialsDto } from './dto/create-user.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { GetToken, GetUser } from './decorators/token.decorator';
-import { User } from './user.entity';
 import { UpdateUserDto } from './dto/update-user.dto';
 
 @Controller('users')
@@ -41,13 +40,14 @@ export class UsersController {
     return {message: "user is verified!!!"}
   }
 
-  @Post('/update')
-  @UseGuards(AuthGuard())
+  @Patch('/:id')
   updateUser(
     @GetToken() accessToken: string,
+    @Param('id', ParseIntPipe) id: number,
     @Body() updateUserDto: UpdateUserDto
     ){
-      return this.usersService.updateUser(accessToken, updateUserDto)
+      console.log("yeah! it passed")
+      return this.usersService.updateUser(id, accessToken, updateUserDto)
     }
 
 }

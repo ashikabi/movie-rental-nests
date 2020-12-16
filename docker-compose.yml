@@ -1,56 +1,45 @@
-version: '3'
+version: "3.7"
 services:
-  mysql:
-    hostname: mysql
-    image: mysql:latest
+  postgres:
+    container_name: postgres
+    hostname: postgres
+    image: 'postgres:latest'
     ports:
-      - "3306:3306"
-    command: --default-authentication-plugin=mysql_native_password
-    restart: always
-    environment: 
-      - MYSQL_ROOT_PASSWORD=!TestingDB20
-      - MYSQL_DATABASE=movierental
+      - "5432:5432"
+      - "5433:5433"
+    environment:
+      POSTGRES_PASSWORD: password
+      
   redis:
+    container_name: redis
     hostname: redis
     image: 'redis:latest'
     ports:
       - "6379:6379"
-  ngnix:
-    hostname: nginx
-    restart: always
-    build:
-      dockerfile: Dockerfile
-      context: ./nginx
-    ports:
-      - '3050:80'
-    links:
-      - "api"
   api:
     hostname: api
     build:
       dockerfile: Dockerfile
       context: .
-      args:
-        - REDIS_HOST=redis
-        - REDIS_PORT=6379
-        - MYSQL_HOST=mysql
-        - MYSQL_PORT=3306
-        - MYSQL_ROOT_PASSWORD=!TestingDB20
-        - MYSQL_DATABASE=movierental
-        - DB_USER=root
+    depends_on:
+      - postgres
+      - redis
     volumes:
       - /app/node_modules
       - .:/app
+    ports:
+      - "3000:3000"
     environment:
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - MYSQL_HOST=mysql
-      - MYSQL_PORT=3306
-      - MYSQL_ROOT_PASSWORD=!TestingDB20
-      - MYSQL_DATABASE=movierental
-      - DB_USER=root
-    links: 
-      - "mysql"
-      - "redis"
-      
-    
+      NODE_ENV: development
+      APP_PORT: 3000
+      JWT_SECRET: "aa5e8c36-7f46-4de1-a7bb-58c8d4909762"
+      JWT_EXPIRATION: 1800
+      SMTP_USER: "movierental.nodemailer@gmail.com"
+      SMTP_PASS: "!Password1234*"
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      PGUSER: postgres
+      PGHOST: postgres
+      PGDATABASE: postgres
+      PGPASSWORD: postgres
+      PGPORT: 5432

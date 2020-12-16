@@ -33,6 +33,7 @@ export class MoviesController {
   }
 
   @Post()
+  @UseGuards(AuthGuard())
   createMovie(
     @Body() createMovieDto: CreateMovieDto
   ): Promise<Movie>{
@@ -40,7 +41,6 @@ export class MoviesController {
   }
 
   @Patch('/:id')
-  @UseGuards(AuthGuard())
   updateMovie(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateMovieDto: UpdateMovieDto

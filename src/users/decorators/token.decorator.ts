@@ -7,6 +7,7 @@ export const GetUser = createParamDecorator((data, ctx: ExecutionContext): User 
 });
 
 export const GetToken = createParamDecorator((data, ctx: ExecutionContext): String => {
+  console.log("GetToken Decorator")
   const req = ctx.switchToHttp().getRequest();
   return req.headers.authorization.split(" ")[1];
 });
